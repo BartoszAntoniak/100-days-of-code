@@ -1,22 +1,42 @@
+from json import JSONDecodeError
 from tkinter import *
 from tkinter import messagebox
 import random
 import pyperclip
+import json
 # ---------------------------- SAVE PASSWORD ------------------------------- #
 def save():
+    website = website_input.get()
+    email = user_input.get()
+    password = password_input.get()
+    new_data = {
+        website:{
+            "email": email,
+            "password":password
+        }
+    }
 
-    if user_input.get() == "" or password_input.get() == "" or website_input.get() == "":
+    if email == "" or password == "" or website == "":
         messagebox.showinfo(title="Wrong input",message="Please input data in all 3 rows")
 
     else:
-        is_ok = messagebox.askokcancel(title=website_input.get(), message="Are details you entered ok to save?")
-        if is_ok:
-            data = open("data.txt","a")
-            data.write(f"{website_input.get()} | {user_input.get()} | {password_input.get()}\n")
-            data.close()
-            website_input.delete(0, 'end')
-            user_input.delete(0,"end")
-            password_input.delete(0,"end")
+        try:
+            with open("data.json","r") as data_file:
+                data = json.load(data_file)
+
+        except FileNotFoundError:
+            with open("data.json","w") as data_file:
+                json.dump(new_data,data_file,indent=4)
+        except JSONDecodeError:
+            data={}
+
+        data.update(new_data)
+        with open("data.json","w") as data_file:
+            json.dump(data,data_file,indent=4)
+
+        website_input.delete(0, 'end')
+        user_input.delete(0,"end")
+        password_input.delete(0,"end")
 
 # ---------------------------- PASSWORD GENERATOR ------------------------------- #
 def password_generator():
@@ -39,6 +59,15 @@ def password_generator():
     password="".join(password_list)
     password_input.insert(0,password)
     pyperclip.copy(password)
+# ---------------------------- SEARCH PASSWORD ------------------------------- #
+def search():
+    website = website_input.get()
+    try:
+        with open("data.json", "r") as data_file:
+            data = json.load(data_file)
+            messagebox.showinfo(title=f"{website} data", message=f"Your {website} email is: {data[website]["email"]}\nYour {website} password is: {data[website]["password"]}")
+    except KeyError:
+            messagebox.showinfo(title="Error",message="This website doesn't appear in registry, try again")
 
 # ---------------------------- UI SETUP ------------------------------- #
 window = Tk()
@@ -78,5 +107,8 @@ generate_password_button.grid(row=3, column=2, sticky="w", padx=5)
 
 add_button = Button(text="Add", command=save, width=15)
 add_button.grid(row=4, column=1)
+
+search_button = Button(text="Search", command = search, width=15)
+search_button.grid(row=1, column=2)
 
 window.mainloop()
