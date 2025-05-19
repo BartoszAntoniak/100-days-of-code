@@ -1,20 +1,49 @@
 import requests
 from bs4 import BeautifulSoup
+import os
+import spotipy
+from spotipy.oauth2 import SpotifyOAuth
 
 selected_date = input("Which year do you want to travel to? Type the date in this format YYYY-MM-DD:\n")
 # selected_date = "1996-10-21"
 
-header = {"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0"}
+UserAgent = os.environ.get("UserAgent", "Key does not exist")
 
+header = {
+    "User-Agent": UserAgent
+}
 URL = f"https://www.billboard.com/charts/hot-100/{selected_date}"
-
-response = requests.get(URL,headers=header)
-data = response.text
-soup = BeautifulSoup(data, 'html.parser')
+response = requests.get(URL, headers=header)
+soup = BeautifulSoup(response.text, 'html.parser')
 titles = soup.select("li ul li h3")
 
-with open("songs.txt", mode="w", encoding="utf-8") as file:
-    for title in titles:
-        song_title = title.get_text(strip=True)
-        file.write(song_title+"\n")
+title_list = [title.get_text(strip=True) for title in titles]
 
+ClientID = os.environ.get("ClientID", "Key does not exist")
+ClientSecret = os.environ.get("ClientSecret", "Key does not exist")
+RedirectURI = os.environ.get("RedirectURI", "Key does not exist")
+
+auth_manager = SpotifyOAuth(
+    client_id=ClientID,
+    client_secret=ClientSecret,
+    redirect_uri=RedirectURI,
+    scope="playlist-modify-private",
+    show_dialog=True,
+    cache_path="token.txt"
+)
+
+sp = spotipy.Spotify(auth_manager=auth_manager)
+
+user_id = sp.current_user()["id"]
+year = selected_date.split("-")[0]
+song_uris = []
+
+for title in title_list:
+    result = sp.search(q=f"{title} {year}", type="track", limit=1)
+    try:
+        uri = result["tracks"]["items"][0]["uri"]
+        song_uris.append(uri)
+    except IndexError:
+        print(f"{title} doesn't exist in Spotify. Skipped.")
+
+print(song_uris)
