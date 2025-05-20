@@ -5,8 +5,6 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
 selected_date = input("Which year do you want to travel to? Type the date in this format YYYY-MM-DD:\n")
-# selected_date = "1996-10-21"
-
 UserAgent = os.environ.get("UserAgent", "Key does not exist")
 
 header = {
@@ -46,4 +44,20 @@ for title in title_list:
     except IndexError:
         print(f"{title} doesn't exist in Spotify. Skipped.")
 
-print(song_uris)
+playlist_name = f"{selected_date} Billboard 100"
+
+new_playlist = sp.user_playlist_create(
+    user=user_id,
+    name=playlist_name,
+    public=False
+)
+
+playlist_id = new_playlist["id"]
+
+sp.playlist_add_items(
+    playlist_id=playlist_id,
+    items=song_uris,
+    position=None,
+)
+
+print("Playlist done")
